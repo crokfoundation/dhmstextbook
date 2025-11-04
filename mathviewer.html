@@ -3,24 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF 뷰어 (글꼴 깨짐 수정)</title>
+    <title>PDF 뷰어 (페이지 이동 추가)</title>
     <style>
-        /* CSS 스타일은 이전과 동일합니다 */
+        /* 기본 스타일 */
         body, html {
             margin: 0; padding: 0; width: 100%; height: 100%;
             background-color: #f0f0f0; font-family: sans-serif;
             overflow: hidden;
         }
+        
+        /* 상단 고정 툴바 */
         #toolbar {
             position: fixed; top: 0; left: 0; width: 100%; height: 40px;
             background-color: #333; color: white; display: flex;
             align-items: center; justify-content: center; z-index: 1000;
             box-shadow: 0 2px 5px rgba(0,0,0,0.2); font-size: 14px;
         }
+
         #page-count-container {
             padding: 5px 10px; background-color: #555; border-radius: 4px;
         }
+        
         #page-num { font-weight: bold; }
+
+        /* --- 🎨 CSS 추가 시작 🎨 --- */
+        #go-to-page-container {
+            margin-left: 15px; /* 페이지 번호와 간격 띄우기 */
+            display: flex;
+            align-items: center;
+        }
+        
+        #page-input {
+            width: 40px;
+            height: 20px;
+            text-align: center;
+            border: 1px solid #777;
+            border-radius: 3px;
+            background-color: #f0f0f0;
+            padding: 2px;
+            /* input[type=number]의 화살표 버튼 제거 */
+            -moz-appearance: textfield;
+        }
+        
+        #page-input::-webkit-outer-spin-button,
+        #page-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        #go-to-page-btn {
+            padding: 4px 8px;
+            margin-left: 5px;
+            border: none;
+            border-radius: 3px;
+            background-color: #555;
+            color: white;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        #go-to-page-btn:hover {
+            background-color: #777;
+        }
+        /* --- 🎨 CSS 추가 끝 🎨 --- */
+
+
+        /* PDF 스크롤 컨테이너 */
         #viewer-container {
             width: 100%; height: 100vh; overflow-y: scroll;
             padding-top: 50px; box-sizing: border-box; display: flex;
@@ -38,7 +85,12 @@
         <div id="page-count-container">
             <span id="page-num">0</span> / <span id="page-count">0</span>
         </div>
-    </div>
+
+        <div id="go-to-page-container">
+            <input type="number" id="page-input" min="1" />
+            <button id="go-to-page-btn">이동</button>
+        </div>
+        </div>
 
     <div id="viewer-container">
         </div>
@@ -58,7 +110,6 @@
         // cPanel 서버에 올린 PDF 파일의 전체 URL
         const PDF_URL = 'https://vcloud.page.place/textbookpdf/pdffile/[%EC%B2%9C%EC%9E%AC]%EC%A4%91%EB%93%B1%EC%88%98%ED%95%992%EB%A5%98.pdf'; 
         
-        // === ❗️ 여기가 수정된 부분입니다 (1) ❗️ ===
         // 한글/한자 폰트 깨짐 방지를 위한 CMap URL 설정
         const C_MAP_URL = '//mozilla.github.io/pdf.js/web/cmaps/';
         
@@ -68,6 +119,11 @@
         const pageNumEl = document.getElementById('page-num');
         const pageCountEl = document.getElementById('page-count');
         
+        // --- 📜 JS 변수 추가 시작 📜 ---
+        const pageInputEl = document.getElementById('page-input');
+        const goToPageBtn = document.getElementById('go-to-page-btn');
+        // --- 📜 JS 변수 추가 끝 📜 ---
+
         let currentPdf = null;
         let currentPage = 1;
 
@@ -76,21 +132,25 @@
         // --------------------------------------------------
         async function loadAndRenderPDF(url) {
             try {
-                // === ❗️ 여기가 수정된 부분입니다 (2) ❗️ ===
-                // PDF 문서를 로드할 때 CMap 옵션을 함께 전달합니다.
+                // PDF 문서를 로드 (CMap 옵션 포함)
                 const loadingTask = pdfjsLib.getDocument({
                     url: url,
                     cMapUrl: C_MAP_URL,
-                    cMapPacked: true // CMaps가 압축된 .bcmap 형식이므로 true로 설정
+                    cMapPacked: true
                 });
 
                 const pdf = await loadingTask.promise;
                 currentPdf = pdf;
-                // === 수정 끝 ===
 
                 // 전체 페이지 수 표시
                 pageCountEl.textContent = pdf.numPages;
-                pageNumEl.textContent = 1; // 초기 페이지 1로 설정
+                pageNumEl.textContent = 1;
+                
+                // --- 📜 JS 추가 시작 📜 ---
+                // input 태그의 최대 페이지 수 설정
+                pageInputEl.max = pdf.numPages;
+                // --- 📜 JS 추가 끝 📜 ---
+
 
                 // 모든 페이지를 순차적으로 렌더링
                 for (let i = 1; i <= pdf.numPages; i++) {
@@ -110,14 +170,14 @@
 
             } catch (error) {
                 console.error('PDF 로드 실패:', error);
-                alert(`PDF 파일을 불러오는 데 실패했습니다.\n파일 URL이 정확한지, 그리고 PDF 서버의 CORS 설정이 올바르게 되었는지 확인해 주세요.\n(오류: ${error.name})`);
+                alert(`PDF 파일을 불러오는 데 실패했습니다.\n(오류: ${error.name})`);
             }
         }
 
         // 특정 페이지를 캔버스에 렌더링하는 함수 (이하 동일)
         async function renderPage(pdf, pageNum, canvas) {
             const page = await pdf.getPage(pageNum);
-            const scale = 1.5; // 렌더링 배율
+            const scale = 1.5;
             const viewport = page.getViewport({ scale });
 
             const context = canvas.getContext('2d');
@@ -154,8 +214,55 @@
 
         const pageObserver = new IntersectionObserver(handlePageIntersection, observerOptions);
 
+        
         // --------------------------------------------------
-        // 5. PDF 뷰어 실행
+        // 5. --- 📜 JS 함수 및 리스너 추가 📜 ---
+        // --------------------------------------------------
+
+        function goToPage() {
+            // PDF가 로드되지 않았으면 아무것도 안 함
+            if (!currentPdf) return;
+
+            const targetPage = parseInt(pageInputEl.value, 10);
+            const totalPages = currentPdf.numPages;
+
+            // 유효성 검사 (숫자가 아니거나, 1보다 작거나, 전체 페이지보다 클 때)
+            if (isNaN(targetPage) || targetPage < 1 || targetPage > totalPages) {
+                alert(`페이지 번호는 1에서 ${totalPages} 사이여야 합니다.`);
+                pageInputEl.value = ''; // 입력창 비우기
+                return;
+            }
+
+            // 대상 페이지 엘리먼트 찾기
+            const targetElement = document.querySelector(`.page-wrapper[data-page-number="${targetPage}"]`);
+
+            if (targetElement) {
+                // 해당 엘리먼트가 보이도록 스크롤
+                targetElement.scrollIntoView();
+                
+                // IntersectionObserver가 페이지 번호를 업데이트할 것이지만,
+                // 스크롤 직후 바로 반영되도록 수동으로도 업데이트
+                pageNumEl.textContent = targetPage;
+                currentPage = targetPage;
+            }
+
+            // 입력창 비우기
+            pageInputEl.value = '';
+        }
+
+        // '이동' 버튼 클릭 시 goToPage 함수 실행
+        goToPageBtn.addEventListener('click', goToPage);
+
+        // input 창에서 'Enter' 키를 눌렀을 때도 goToPage 함수 실행
+        pageInputEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                goToPage();
+            }
+        });
+
+
+        // --------------------------------------------------
+        // 6. PDF 뷰어 실행 (기존 5번)
         // --------------------------------------------------
         loadAndRenderPDF(PDF_URL);
 
