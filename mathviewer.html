@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF 뷰어 (원격 파일 로드)</title>
+    <style>
+        /* 기본 스타일 초기화 */
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #f0f0f0; /* 배경색 */
+            font-family: sans-serif;
+            overflow: hidden; /* body 자체 스크롤 방지 */
+        }
+
+        /* 상단 고정 툴바 */
+        #toolbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 40px;
+            background-color: #333;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            font-size: 14px;
+        }
+
+        #page-count-container {
+            padding: 5px 10px;
+            background-color: #555;
+            border-radius: 4px;
+        }
+        
+        #page-num {
+            font-weight: bold;
+        }
+
+        /* PDF 페이지가 표시될 스크롤 컨테이너 */
+        #viewer-container {
+            width: 100%;
+            height: 100vh; /* 화면 전체 높이 */
+            overflow-y: scroll; /* 세로 스크롤 활성화 */
+            padding-top: 50px; /* 고정 툴바 높이만큼 여백 */
+            box-sizing: border-box; /* 패딩을 높이에 포함 */
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* 페이지 중앙 정렬 */
+        }
+
+        /* 각 PDF 페이지를 감싸는 래퍼 */
+        .page-wrapper {
+            margin-bottom: 10px; /* 페이지 사이 여백 */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15); /* 그림자 효과 */
+        }
+
+        /* PDF 페이지가 그려질 캔버스 */
+        .pdf-page-canvas {
+            display: block; /* 캔버스 하단 불필요한 여백 제거 */
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="toolbar">
+        <div id="page-count-container">
+            <span id="page-num">0</span> / <span id="page-count">0</span>
+        </div>
+    </div>
+
+    <div id="viewer-container">
+        </div>
+
+
+    <script type="module">
+        // PDF.js 라이브러리 import (CDN)
+        import * as pdfjsLib from '//mozilla.github.io/pdf.js/build/pdf.mjs';
+
+        // PDF.js Worker 경로 설정
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `//mozilla.github.io/pdf.js/build/pdf.worker.mjs`;
+
+        // --------------------------------------------------
+        // 변수 설정
+        // --------------------------------------------------
+        
+        // === ❗️ 여기가 핵심입니다 ❗️ ===
+        // .htaccess를 설정한 '다른 서버'에 있는 PDF 파일의 전체 URL을 입력하세요.
+        const PDF_URL = 'https://vcloud.page.place/textbookpdf/pdffile/[%EC%B2%9C%EC%9E%AC]%EC%A4%91%EB%93%B1%EC%88%98%ED%95%992%EB%A5%98.pdf'; 
+        
+        // HTML 요소 가져오기
+        const viewerContainer = document.getElementById('viewer-container');
+        const pageNumEl = document.getElementById('page-num');
+        const pageCountEl = document.getElementById('page-count');
+        
+        let currentPdf = null;
+        let currentPage = 1;
+
+        // --------------------------------------------------
+        // 3. PDF 로드 및 렌더링 함수
+        // --------------------------------------------------
+        async function loadAndRenderPDF(url) {
+            try {
+                // PDF 문서 로드
+                const pdf = await pdfjsLib.getDocument(url).promise;
+                currentPdf = pdf;
+
+                // 전체 페이지 수 표시
+                pageCountEl.textContent = pdf.numPages;
+                pageNumEl.textContent = 1; // 초기 페이지 1로 설정
+
+                // 모든 페이지를 순차적으로 렌더링
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    const pageWrapper = document.createElement('div');
+                    pageWrapper.classList.add('page-wrapper');
+                    pageWrapper.dataset.pageNumber = i;
+
+                    const canvas = document.createElement('canvas');
+                    canvas.classList.add('pdf-page-canvas');
+                    pageWrapper.appendChild(canvas);
+                    viewerContainer.appendChild(pageWrapper);
+
+                    await renderPage(pdf, i, canvas);
+                    
+                    pageObserver.observe(pageWrapper);
+                }
+
+            } catch (error) {
+                console.error('PDF 로드 실패:', error);
+                alert(`PDF 파일을 불러오는 데 실패했습니다.\n파일 URL이 정확한지, 그리고 PDF 서버의 CORS 설정이 올바르게 되었는지 확인해 주세요.\n(오류: ${error.name})`);
+            }
+        }
+
+        // 특정 페이지를 캔버스에 렌더링하는 함수
+        async function renderPage(pdf, pageNum, canvas) {
+            const page = await pdf.getPage(pageNum);
+            const scale = 1.5; // 렌더링 배율
+            const viewport = page.getViewport({ scale });
+
+            const context = canvas.getContext('2d');
+            canvas.height = viewport.height;
+            canvas.width = viewport.width;
+
+            const renderContext = {
+                canvasContext: context,
+                viewport: viewport
+            };
+            
+            await page.render(renderContext).promise;
+        }
+
+        // --------------------------------------------------
+        // 4. 스크롤 감지 (Intersection Observer)
+        // --------------------------------------------------
+        
+        function handlePageIntersection(entries, observer) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+                    const visiblePageNum = entry.target.dataset.pageNumber;
+                    pageNumEl.textContent = visiblePageNum;
+                    currentPage = parseInt(visiblePageNum, 10);
+                }
+            });
+        }
+
+        const observerOptions = {
+            root: viewerContainer,
+            rootMargin: '0px',
+            threshold: 0.5
+        };
+
+        const pageObserver = new IntersectionObserver(handlePageIntersection, observerOptions);
+
+        // --------------------------------------------------
+        // 5. PDF 뷰어 실행
+        // --------------------------------------------------
+        loadAndRenderPDF(PDF_URL);
+
+    </script>
+    
+</body>
+</html>
