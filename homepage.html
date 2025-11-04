@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crok</title>
+  <link rel="stylesheet" href="hstyle.css" />
+</head>
+<body>
+
+  <div class="space-background"></div>
+
+  <div class="main-content-wrapper">
+    <h1 class="group-name">S.M.A.R.T</h1>
+
+    <nav class="tabs" role="tablist">
+      <button class="tab-button active" data-tab="home" role="tab" aria-selected="true" tabindex="0">홈</button>
+      <button class="tab-button" data-tab="hyperlink" role="tab" aria-selected="false" tabindex="-2">파일</button>
+    </nav>
+
+    <section id="home" class="tab-content active" role="tabpanel" tabindex="0">
+      <div class="main-text">
+        <span>세상을</span>
+        <span>바꾸다</span>
+      </div>
+    </section>
+
+    <section id="hyperlink" class="tab-content" role="tabpanel" tabindex="-2" aria-hidden="true">
+        <button class="project-settings-button" type="button">Files</button>
+      <ul class="project-list" aria-live="polite" aria-relevant="additions removals">
+        <li data-status="ongoing"><span class="title">역사</span><a href="history.html" class="project-settings-button">이동</a></li>
+        <li data-status="ongoing"><span class="title">수학</span><a href="math.html" class="project-settings-button">이동</a></li>
+      </ul>
+    </section>
+  </div>
+
+  <script src="hscript.js"></script>
+</body>
+</html>

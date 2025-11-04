@@ -1,0 +1,59 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    margin: 0;
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f9f9f9;
+    color: #333;
+    text-align: center;
+}
+
+.launcher-container {
+    max-width: 400px;
+    padding: 40px;
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.logo {
+    width: 100px; /* 로고 크기 조절 */
+    margin-bottom: 20px;
+}
+
+h2 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 24px;
+}
+
+p {
+    color: #666;
+    font-size: 16px;
+    margin-bottom: 30px;
+}
+
+.play-button {
+    display: inline-block;
+    padding: 12px 30px;
+    font-size: 18px;
+    font-weight: bold;
+    color: white;
+    background-color: #FF0000; /* YouTube Red */
+    border: none;
+    border-radius: 8px;
+    text-decoration: none; /* 링크 밑줄 제거 */
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.play-button:hover {
+    background-color: #c90000; /* 호버 시 더 어두운 빨간색 */
+}
+
+.play-button:active {
+    transform: scale(0.98); /* 클릭 시 살짝 작아지는 효과 */
+}
